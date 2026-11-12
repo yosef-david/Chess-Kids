@@ -22,5 +22,7 @@
       "source": "/engine/:file*",
       "destination": "https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/:file*"
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }

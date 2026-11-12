@@ -146,3 +146,133 @@ create policy "Recipients can respond to friendship requests"
 
 create policy "Signed-in players can view puzzles"
   on public.puzzles for select to authenticated using (true);
+
+
+-- Queue for finding another player with the same time control.
+create table if not exists public.matchmaking_queue (
+  player_id uuid primary key references public.profiles(id) on delete cascade,
+  time_control text not null,
+  rating integer not null default 1200,
+  status text not null default 'waiting' check (status in ('waiting','matched')),
+  game_id uuid references public.games(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists matchmaking_queue_search_idx
+  on public.matchmaking_queue(time_control, status, created_at);
+
+alter table public.matchmaking_queue enable row level security;
+
+create policy "Players can view their own matchmaking entry"
+  on public.matchmaking_queue for select to authenticated
+  using (player_id = auth.uid());
+create policy "Players can join matchmaking as themselves"
+  on public.matchmaking_queue for insert to authenticated
+  with check (player_id = auth.uid());
+create policy "Players can update their own waiting entry"
+  on public.matchmaking_queue for update to authenticated
+  using (player_id = auth.uid() and status = 'waiting')
+  with check (player_id = auth.uid() and status = 'waiting' and game_id is null);
+create policy "Players can leave their own queue entry"
+  on public.matchmaking_queue for delete to authenticated
+  using (player_id = auth.uid());
+
+create or replace function public.join_matchmaking_queue(p_time_control text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_opponent uuid;
+  v_game uuid;
+  v_existing uuid;
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select game_id into v_existing
+  from public.matchmaking_queue
+  where player_id = v_user and status = 'matched';
+
+  if v_existing is not null then
+    return v_existing;
+  end if;
+
+  insert into public.matchmaking_queue(player_id, time_control, rating, status, game_id, created_at)
+  select v_user, p_time_control, coalesce(p.rating, 1200), 'waiting', null, now()
+  from public.profiles p
+  where p.id = v_user
+  on conflict (player_id) do update
+    set time_control = excluded.time_control,
+        rating = excluded.rating,
+        status = 'waiting',
+        game_id = null,
+        created_at = now();
+
+  select player_id into v_opponent
+  from public.matchmaking_queue
+  where time_control = p_time_control
+    and status = 'waiting'
+    and player_id <> v_user
+  order by created_at
+  limit 1
+  for update skip locked;
+
+  if v_opponent is null then
+    return null;
+  end if;
+
+  insert into public.games(white_player, black_player, status, time_control)
+  values (v_opponent, v_user, 'active', p_time_control)
+  returning id into v_game;
+
+  update public.matchmaking_queue
+  set status = 'matched', game_id = v_game
+  where player_id in (v_user, v_opponent);
+
+  return v_game;
+end;
+$$;
+
+create or replace function public.leave_matchmaking_queue()
+returns void
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  delete from public.matchmaking_queue
+  where player_id = auth.uid() and status = 'waiting';
+$$;
+
+create or replace function public.acknowledge_matchmaking_game()
+returns void
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  delete from public.matchmaking_queue
+  where player_id = auth.uid() and status = 'matched';
+$$;
+
+revoke all on function public.join_matchmaking_queue(text) from public;
+revoke all on function public.leave_matchmaking_queue() from public;
+revoke all on function public.acknowledge_matchmaking_game() from public;
+grant execute on function public.join_matchmaking_queue(text) to authenticated;
+grant execute on function public.leave_matchmaking_queue() to authenticated;
+grant execute on function public.acknowledge_matchmaking_game() to authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'games') then
+      alter publication supabase_realtime add table public.games;
+    end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'game_moves') then
+      alter publication supabase_realtime add table public.game_moves;
+    end if;
+  end if;
+end;
+$$;

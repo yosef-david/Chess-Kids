@@ -84,19 +84,19 @@
   document.getElementById('findOnline').disabled=true;document.getElementById('cancelQueue').hidden=false;
   document.getElementById('status').textContent='מחפש יריב…';
   document.getElementById('engineStatus').textContent='החיפוש ימשיך עד למציאת שחקן או לביטול.';
-  const tc=Number(document.getElementById('timecontrol').value)+'+0';
+  const tc=Number(document.getElementById('timecontrol').value)+'+0';let queueFailed=false;
   const search=async()=>{
     const {data,error}=await dbClient.rpc('join_matchmaking_queue',{p_time_control:tc});
-    if(error){document.getElementById('status').textContent='שגיאה בחיפוש';document.getElementById('engineStatus').textContent=error.message;clearInterval(queuePoll);queuePoll=null;document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;return}
+    if(error){queueFailed=true;document.getElementById('status').textContent='שגיאה בחיפוש';document.getElementById('engineStatus').textContent=error.message;if(queuePoll){clearInterval(queuePoll);queuePoll=null}document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;return}
     if(data){if(queuePoll){clearInterval(queuePoll);queuePoll=null}await enterOnlineGame(data)}
   };
-  await search();if(!currentGameId&&!queuePoll)queuePoll=setInterval(search,3000);
+  await search();if(!currentGameId&&!queuePoll&&!queueFailed)queuePoll=setInterval(search,3000);
  }
  async function exitOnline(){
   if(queuePoll){clearInterval(queuePoll);queuePoll=null}
   if(dbClient&&currentUser)await dbClient.rpc('leave_matchmaking_queue');
   if(gameChannel){await dbClient.removeChannel(gameChannel);gameChannel=null}
-  if(currentGameId&&dbClient)await dbClient.from('games').update({status:'abandoned'}).eq('id',currentGameId);
+  if(currentGameId&&dbClient&&!game.game_over())await dbClient.from('games').update({status:'abandoned'}).eq('id',currentGameId);
   currentGameId=null;onlineColor=null;mode='local';
   document.getElementById('online').classList.remove('on');document.getElementById('local').classList.add('on');document.getElementById('computer').classList.remove('on');
   document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;
@@ -108,7 +108,7 @@
 document.getElementById('new').onclick=()=>{if(mode==='online')exitOnline();else reset()};document.getElementById('flip').onclick=()=>{flipped=!flipped;draw()};
  document.getElementById('history').onclick=()=>{const el=document.getElementById('moves');el.hidden=!el.hidden;document.getElementById('history').textContent=el.hidden?'☷ הצג מהלכים':'הסתר מהלכים'};
  document.getElementById('local').onclick=()=>{if(mode==='online'){exitOnline();return}mode='local';document.getElementById('local').classList.add('on');document.getElementById('computer').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='שחקן 2';reset()};
- document.getElementById('computer').onclick=()=>{if(mode==='online'){exitOnline();return}mode='computer';document.getElementById('computer').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='מחשב';reset()};
+ document.getElementById('computer').onclick=()=>{const apply=()=>{mode='computer';document.getElementById('computer').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='מחשב';reset()};if(mode==='online'){exitOnline().then(apply)}else apply()};
  document.getElementById('theme').onclick=()=>document.body.classList.toggle('light');
  let dbClient=null,currentUser=null,currentGameId=null,onlineColor=null,gameChannel=null,queuePoll=null;
  const authModal=document.getElementById('authModal');

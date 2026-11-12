@@ -102,7 +102,8 @@
   document.getElementById('engineStatus').textContent='משחק אונליין פעיל • אתה משחק '+(onlineColor==='w'?'בלבן':'בשחור');
   whiteTime=Number(data.white_time_ms||clockLimit*1000)/1000;blackTime=Number(data.black_time_ms||clockLimit*1000)/1000;clockStarted=!!data.clock_started_at&&data.status==='active';flagged=false;timeoutClaimed=false;onlineResultMessage=null;
   if(clockStarted){const elapsed=Math.floor((Date.now()-new Date(data.clock_started_at).getTime())/1000);if(data.active_color==='w')whiteTime=Math.max(0,whiteTime-elapsed);else blackTime=Math.max(0,blackTime-elapsed)}
-  if(data.status==='finished')onlineResultMessage=data.result==='1/2-1/2'?'המשחק הסתיים בתיקו.':(data.result===(onlineColor==='w'?'1-0':'0-1')?'ניצחת!':'המשחק הסתיים — היריב ניצח.');
+  if(data.status==='finished'){flagged=true;document.getElementById('resign').hidden=true;onlineResultMessage=data.result==='1/2-1/2'?'המשחק הסתיים בתיקו.':(data.result===(onlineColor==='w'?'1-0':'0-1')?'ניצחת!':'המשחק הסתיים — היריב ניצח.')}
+  if(data.status==='abandoned'){flagged=true;document.getElementById('resign').hidden=true;onlineResultMessage='המשחק ננטש.'}
   lastTick=Date.now();draw();
   if(gameChannel)await dbClient.removeChannel(gameChannel);
   gameChannel=dbClient.channel('chess-kids-game-'+id)

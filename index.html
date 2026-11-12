@@ -21,7 +21,7 @@
 <script src="./config.js"></script>
 <script>
 (function(){
- const game=new Chess();let selected=null,targets=[],flipped=false,mode='local',busy=false,clockStarted=false,whiteTime=300,blackTime=300,clockLimit=300,lastTick=Date.now(),flagged=false,puzzleSolved=false,puzzleSolution='g6g7';
+ const game=new Chess();let selected=null,targets=[],flipped=false,mode='local',busy=false,clockStarted=false,whiteTime=300,blackTime=300,clockLimit=300,lastTick=Date.now(),flagged=false,puzzleSolved=false,puzzleSolution='g6g7',timeoutClaimed=false,onlineResultMessage=null;
  const glyph={w:{k:'♔',q:'♕',r:'♖',b:'♗',n:'♘',p:'♙'},b:{k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'}};
  const board=document.getElementById('board');
  function fmt(t){const s=Math.max(0,t);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
@@ -35,7 +35,7 @@
    if(ci===0){const co=document.createElement('small');co.className='coords';co.textContent=rank;el.appendChild(co)}
    el.addEventListener('click',()=>clickSquare(sq));board.appendChild(el);
   }));
-  document.getElementById('status').textContent=puzzleSolved?'כל הכבוד! פתרת את החידה.':flagged?'נגמר הזמן!':game.in_checkmate()?'מט! המשחק הסתיים':game.in_draw()?'תיקו!':game.in_check()?'שח!':busy?'המחשב חושב…':'התור של '+(game.turn()==='w'?'הלבן':'השחור');
+  document.getElementById('status').textContent=onlineResultMessage||(puzzleSolved?'כל הכבוד! פתרת את החידה.':flagged?'נגמר הזמן!':game.in_checkmate()?'מט! המשחק הסתיים':game.in_draw()?'תיקו!':game.in_check()?'שח!':busy?'המחשב חושב…':'התור של '+(game.turn()==='w'?'הלבן':'השחור'));
   document.getElementById('count').textContent=game.history().length;document.getElementById('state').textContent=flagged?'הזמן נגמר':game.game_over()?'הסתיים':'פעיל';drawClocks();
   document.getElementById('moves').innerHTML=game.history().map((m,i)=>(i%2===0?'<br><span>'+(Math.floor(i/2)+1)+'.</span>':' ')+m).join('');
  }
@@ -49,7 +49,7 @@
  function runEngine(){if(!engineReady||!enginePendingFen||!engine)return;const fen=enginePendingFen;enginePendingFen=null;engine.postMessage('ucinewgame');engine.postMessage('position fen '+fen);engine.postMessage('go depth 12')}
  function ensureEngine(){if(engine||engineFailed)return;try{const engineUrl=location.protocol==='file:'?new URL('./engine/stockfish-19-lite-single.js',location.href).href:'/engine/stockfish-19-lite-single.js';engine=new Worker(engineUrl);engine.onmessage=e=>{const line=String(e.data);if(line==='uciok'){engine.postMessage('isready')}else if(line==='readyok'){engineReady=true;document.getElementById('engineStatus').textContent='Stockfish מוכן';runEngine()}else if(line.startsWith('bestmove ')){const uci=line.split(/\\s+/)[1];busy=false;if(uci&&uci!=='(none)'&&mode==='computer'&&game.turn()==='b'&&!game.game_over()&&!flagged){game.move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]||'q'})}draw()}};engine.onerror=()=>{engineFailed=true;busy=false;document.getElementById('engineStatus').textContent='לא ניתן לטעון את Stockfish. בדוק שהאתר פורסם.';draw()};engine.postMessage('uci')}catch(err){engineFailed=true;busy=false;document.getElementById('engineStatus').textContent='שגיאה בטעינת המנוע';draw()}}
  function bot(){busy=true;enginePendingFen=game.fen();document.getElementById('engineStatus').textContent=engineFailed?'מנוע לא זמין':engineReady?'המחשב מנתח את העמדה…':'טוען את Stockfish…';draw();ensureEngine();runEngine()}
- function reset(){if(engine){engine.postMessage('stop')}enginePendingFen=null;game.reset();selected=null;targets=[];busy=false;clockStarted=false;flagged=false;puzzleSolved=false;whiteTime=clockLimit;blackTime=clockLimit;lastTick=Date.now();draw()}
+ function reset(){if(engine){engine.postMessage('stop')}enginePendingFen=null;game.reset();selected=null;targets=[];busy=false;clockStarted=false;flagged=false;puzzleSolved=false;timeoutClaimed=false;onlineResultMessage=null;whiteTime=clockLimit;blackTime=clockLimit;lastTick=Date.now();draw()}
  function loadPuzzle(){if(mode==='online'){exitOnline().then(loadPuzzle);return}mode='puzzle';puzzleSolved=false;puzzleSolution='g6g7';game.load('7k/8/5KQ1/8/8/8/8/8 w - - 0 1');selected=null;targets=[];clockStarted=false;flagged=false;document.getElementById('local').classList.remove('on');document.getElementById('computer').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='חידת מט';document.getElementById('engineStatus').textContent='לבן לשחק: מצא מט במהלך אחד.';draw()}
  document.getElementById('puzzle').onclick=loadPuzzle;
  document.getElementById('undo').onclick=()=>{if(mode==='online'||busy||!game.history().length)return;game.undo();if(mode==='computer'&&game.history().length)game.undo();flagged=false;selected=null;targets=[];draw()};
@@ -87,9 +87,9 @@
  document.getElementById('copyInviteBtn').onclick=()=>{if(activeInviteCode&&navigator.clipboard)navigator.clipboard.writeText(activeInviteCode).then(()=>document.getElementById('inviteStatus').textContent='הקוד הועתק.').catch(()=>document.getElementById('inviteStatus').textContent='לא הצלחנו להעתיק; אפשר לסמן ולהעתיק ידנית.')};
  async function saveOnlineMove(move){
   if(!dbClient||!currentGameId||!move)return;
-  const result=game.in_checkmate()?(game.turn()==='w'?'0-1':'1-0'):game.in_draw()?'1/2-1/2':null;
-  const {error}=await dbClient.functions.invoke('submit-move',{body:{gameId:currentGameId,uci:move.from+move.to+(move.promotion||'')}});
-  if(error){game.undo();draw();document.getElementById('status').textContent='המהלך לא נשמר';document.getElementById('engineStatus').textContent=error.message}
+  const {data,error}=await dbClient.functions.invoke('submit-move',{body:{gameId:currentGameId,uci:move.from+move.to+(move.promotion||'')}});
+  if(error){game.undo();draw();document.getElementById('status').textContent='המהלך לא נשמר';document.getElementById('engineStatus').textContent=error.message;return}
+  if(data&&data.clock){whiteTime=Number(data.clock.white_time_ms)/1000;blackTime=Number(data.clock.black_time_ms)/1000;clockStarted=!!data.clock.clock_started_at&&data.clock.status==='active';lastTick=Date.now();flagged=false;drawClocks()}
  }
  async function enterOnlineGame(id){
   const {data,error}=await dbClient.from('games').select('*').eq('id',id).single();
@@ -99,12 +99,22 @@
   document.getElementById('topname').textContent=onlineColor==='w'?'יריב אונליין • שחור':'יריב אונליין • לבן';
   document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;
   document.getElementById('engineStatus').textContent='משחק אונליין פעיל • אתה משחק '+(onlineColor==='w'?'בלבן':'בשחור');
-  clockStarted=game.history().length>0;lastTick=Date.now();draw();
+  whiteTime=Number(data.white_time_ms||clockLimit*1000)/1000;blackTime=Number(data.black_time_ms||clockLimit*1000)/1000;clockStarted=!!data.clock_started_at&&data.status==='active';flagged=false;timeoutClaimed=false;onlineResultMessage=null;
+  if(clockStarted){const elapsed=Math.floor((Date.now()-new Date(data.clock_started_at).getTime())/1000);if(data.active_color==='w')whiteTime=Math.max(0,whiteTime-elapsed);else blackTime=Math.max(0,blackTime-elapsed)}
+  if(data.status==='finished')onlineResultMessage=data.result==='1/2-1/2'?'המשחק הסתיים בתיקו.':(data.result===(onlineColor==='w'?'1-0':'0-1')?'ניצחת!':'המשחק הסתיים — היריב ניצח.');
+  lastTick=Date.now();draw();
   if(gameChannel)await dbClient.removeChannel(gameChannel);
-  gameChannel=dbClient.channel('chess-kids-game-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'game_moves',filter:'game_id=eq.'+id},payload=>{
+  gameChannel=dbClient.channel('chess-kids-game-'+id)
+   .on('postgres_changes',{event:'INSERT',schema:'public',table:'game_moves',filter:'game_id=eq.'+id},payload=>{
     const m=payload.new;if(!m||m.player_id===currentUser.id)return;
-    const u=m.uci;try{game.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});clockStarted=true;lastTick=Date.now();draw()}catch(err){document.getElementById('status').textContent='התקבלה תנועה לא תקינה — יש לרענן את המשחק'}
-  }).subscribe();
+    const u=m.uci;try{game.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});draw()}catch(err){document.getElementById('status').textContent='התקבלה תנועה לא תקינה — יש לרענן את המשחק'}
+   })
+   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'games',filter:'id=eq.'+id},payload=>{
+    const g=payload.new;whiteTime=Number(g.white_time_ms)/1000;blackTime=Number(g.black_time_ms)/1000;clockStarted=!!g.clock_started_at&&g.status==='active';lastTick=Date.now();flagged=false;
+    if(g.status==='finished'){clockStarted=false;onlineResultMessage=g.result==='1/2-1/2'?'המשחק הסתיים בתיקו.':(g.result===(onlineColor==='w'?'1-0':'0-1')?'ניצחת!':'המשחק הסתיים — היריב ניצח.')}
+    if(g.status==='abandoned'){clockStarted=false;onlineResultMessage='היריב עזב את המשחק.'}
+    draw();
+   }).subscribe();
   await dbClient.rpc('acknowledge_matchmaking_game');
  }
  async function startOnline(){

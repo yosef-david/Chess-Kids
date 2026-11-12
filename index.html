@@ -109,7 +109,7 @@
   gameChannel=dbClient.channel('chess-kids-game-'+id)
    .on('postgres_changes',{event:'INSERT',schema:'public',table:'game_moves',filter:'game_id=eq.'+id},payload=>{
     const m=payload.new;if(!m||m.player_id===currentUser.id)return;
-    const u=m.uci;try{game.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});draw()}catch(err){document.getElementById('status').textContent='התקבלה תנועה לא תקינה — יש לרענן את המשחק'}
+    const u=m.uci;try{game.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'});clockStarted=true;lastTick=Date.now();draw()}catch(err){document.getElementById('status').textContent='התקבלה תנועה לא תקינה — יש לרענן את המשחק'}
    })
    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'games',filter:'id=eq.'+id},payload=>{
     const g=payload.new;whiteTime=Number(g.white_time_ms)/1000;blackTime=Number(g.black_time_ms)/1000;clockStarted=!!g.clock_started_at&&g.status==='active';lastTick=Date.now();flagged=false;

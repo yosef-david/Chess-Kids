@@ -88,8 +88,8 @@
  async function saveOnlineMove(move){
   if(!dbClient||!currentGameId||!move)return;
   const result=game.in_checkmate()?(game.turn()==='w'?'0-1':'1-0'):game.in_draw()?'1/2-1/2':null;
-  const {error}=await dbClient.rpc('record_chess_move',{p_game_id:currentGameId,p_ply:game.history().length,p_san:move.san,p_uci:move.from+move.to+(move.promotion||''),p_fen_after:game.fen(),p_pgn:game.pgn(),p_result:result});
-  if(error){game.undo();draw();document.getElementById('status').textContent='שגיאה בשמירת המהלך';document.getElementById('engineStatus').textContent=error.message}
+  const {error}=await dbClient.functions.invoke('submit-move',{body:{gameId:currentGameId,uci:move.from+move.to+(move.promotion||'')}});
+  if(error){game.undo();draw();document.getElementById('status').textContent='המהלך לא נשמר';document.getElementById('engineStatus').textContent=error.message}
  }
  async function enterOnlineGame(id){
   const {data,error}=await dbClient.from('games').select('*').eq('id',id).single();

@@ -396,3 +396,48 @@ revoke update on public.profiles from authenticated;
 grant update (username, display_name) on public.profiles to authenticated;
 revoke insert, update on public.games from authenticated;
 revoke insert on public.game_moves from authenticated;
+
+
+-- Admin permissions are granted only through trusted app_metadata set in Supabase.
+create or replace function public.is_chess_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role' = 'admin', false);
+$$;
+
+create policy "Chess admins can view all games"
+  on public.games for select to authenticated
+  using (public.is_chess_admin());
+create policy "Chess admins can view all game moves"
+  on public.game_moves for select to authenticated
+  using (public.is_chess_admin());
+create policy "Chess admins can manage puzzles"
+  on public.puzzles for all to authenticated
+  using (public.is_chess_admin())
+  with check (public.is_chess_admin());
+
+create or replace function public.admin_set_player_rating(p_player_id uuid, p_rating integer)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not public.is_chess_admin() then
+    raise exception 'Administrator access required';
+  end if;
+  if p_rating < 100 or p_rating > 4000 then
+    raise exception 'Rating must be between 100 and 4000';
+  end if;
+  update public.profiles set rating = p_rating where id = p_player_id;
+end;
+$$;
+
+revoke all on function public.is_chess_admin() from public;
+revoke all on function public.admin_set_player_rating(uuid, integer) from public;
+grant execute on function public.is_chess_admin() to authenticated;
+grant execute on function public.admin_set_player_rating(uuid, integer) to authenticated;

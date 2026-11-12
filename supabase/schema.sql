@@ -299,6 +299,10 @@ declare
   v_black uuid;
   v_status text;
   v_expected_ply integer;
+  v_white_rating integer;
+  v_black_rating integer;
+  v_white_score numeric;
+  v_white_expected numeric;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -323,6 +327,10 @@ begin
     raise exception 'It is not this player turn';
   end if;
 
+  if p_result is not null and p_result not in ('1-0','0-1','1/2-1/2') then
+    raise exception 'Invalid game result';
+  end if;
+
   select coalesce(max(ply), 0) + 1 into v_expected_ply
   from public.game_moves
   where game_id = p_game_id;
@@ -342,8 +350,49 @@ begin
       updated_at = now(),
       finished_at = case when p_result is null then null else now() end
   where id = p_game_id;
+
+  if p_result is not null and v_black is not null then
+    select rating into v_white_rating from public.profiles where id = v_white for update;
+    select rating into v_black_rating from public.profiles where id = v_black for update;
+    v_white_score := case p_result when '1-0' then 1 when '0-1' then 0 else 0.5 end;
+    v_white_expected := 1 / (1 + power(10::numeric, (v_black_rating - v_white_rating)::numeric / 400));
+    update public.profiles
+      set rating = greatest(100, round(v_white_rating + 32 * (v_white_score - v_white_expected))::integer),
+          games_played = games_played + 1
+      where id = v_white;
+    update public.profiles
+      set rating = greatest(100, round(v_black_rating + 32 * ((1 - v_white_score) - (1 - v_white_expected)))::integer),
+          games_played = games_played + 1
+      where id = v_black;
+  end if;
+end;
+$$;
+
+create or replace function public.abandon_chess_game(p_game_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  update public.games
+  set status = 'abandoned', updated_at = now()
+  where id = p_game_id
+    and status = 'active'
+    and (white_player = auth.uid() or black_player = auth.uid());
 end;
 $$;
 
 revoke all on function public.record_chess_move(uuid, integer, text, text, text, text, text) from public;
 grant execute on function public.record_chess_move(uuid, integer, text, text, text, text, text) to authenticated;
+revoke all on function public.abandon_chess_game(uuid) from public;
+grant execute on function public.abandon_chess_game(uuid) to authenticated;
+
+-- Clients may edit display names/usernames, but cannot alter ratings or game records.
+revoke update on public.profiles from authenticated;
+grant update (username, display_name) on public.profiles to authenticated;
+revoke insert, update on public.games from authenticated;
+revoke insert on public.game_moves from authenticated;

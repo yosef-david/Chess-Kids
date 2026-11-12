@@ -98,7 +98,7 @@
   currentGameId=id;mode='online';document.getElementById('online').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('computer').classList.remove('on');onlineColor=data.white_player===currentUser.id?'w':'b';
   game.reset();if(data.pgn)game.load_pgn(data.pgn);
   document.getElementById('topname').textContent=onlineColor==='w'?'יריב אונליין • שחור':'יריב אונליין • לבן';
-  document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;
+  document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=true;document.getElementById('online').disabled=true;
   document.getElementById('engineStatus').textContent='משחק אונליין פעיל • אתה משחק '+(onlineColor==='w'?'בלבן':'בשחור');
   whiteTime=Number(data.white_time_ms||clockLimit*1000)/1000;blackTime=Number(data.black_time_ms||clockLimit*1000)/1000;clockStarted=!!data.clock_started_at&&data.status==='active';flagged=false;timeoutClaimed=false;onlineResultMessage=null;
   if(clockStarted){const elapsed=Math.floor((Date.now()-new Date(data.clock_started_at).getTime())/1000);if(data.active_color==='w')whiteTime=Math.max(0,whiteTime-elapsed);else blackTime=Math.max(0,blackTime-elapsed)}
@@ -142,7 +142,7 @@
   if(currentGameId&&dbClient&&!game.game_over())await dbClient.rpc('abandon_chess_game',{p_game_id:currentGameId});
   currentGameId=null;onlineColor=null;mode='local';
   document.getElementById('online').classList.remove('on');document.getElementById('local').classList.add('on');document.getElementById('computer').classList.remove('on');
-  document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;
+  document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;document.getElementById('online').disabled=false;
   document.getElementById('topname').textContent='שחקן 2';reset();
  }
  document.getElementById('online').onclick=startOnline;

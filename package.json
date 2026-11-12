@@ -4,7 +4,7 @@
   "private": true,
   "description": "Chess Kids — Hebrew chess website prototype",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/copy-engine.mjs && vite --host 0.0.0.0",
     "build": "node scripts/copy-engine.mjs && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "desktop": "npm run build && electron electron/main.cjs",

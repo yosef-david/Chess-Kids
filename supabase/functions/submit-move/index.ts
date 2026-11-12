@@ -103,6 +103,7 @@ Deno.serve(async (request: Request) => {
 
     const { error: saveError } = await admin.rpc("record_chess_move", {
       p_game_id: gameId,
+      p_player_id: user.id,
       p_ply: (savedMoves || []).length + 1,
       p_san: move.san,
       p_uci: move.from + move.to + (move.promotion || ""),

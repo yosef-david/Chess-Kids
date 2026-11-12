@@ -653,3 +653,64 @@ $$;
 
 revoke all on function public.claim_game_timeout(uuid) from public;
 grant execute on function public.claim_game_timeout(uuid) to authenticated;
+
+
+create or replace function public.resign_chess_game(p_game_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_white uuid;
+  v_black uuid;
+  v_status text;
+  v_result text;
+  v_white_rating integer;
+  v_black_rating integer;
+  v_white_score numeric;
+  v_white_expected numeric;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select white_player, black_player, status
+    into v_white, v_black, v_status
+  from public.games
+  where id = p_game_id
+  for update;
+
+  if not found or (auth.uid() <> v_white and auth.uid() <> v_black) then
+    raise exception 'Game not found or access denied';
+  end if;
+  if v_status <> 'active' or v_black is null then
+    raise exception 'Game is not active';
+  end if;
+
+  v_result := case when auth.uid() = v_white then '0-1' else '1-0' end;
+
+  update public.games
+  set status = 'finished', result = v_result, finished_at = now(),
+      updated_at = now(), clock_started_at = null
+  where id = p_game_id;
+
+  select rating into v_white_rating from public.profiles where id = v_white for update;
+  select rating into v_black_rating from public.profiles where id = v_black for update;
+  v_white_score := case v_result when '1-0' then 1 else 0 end;
+  v_white_expected := 1 / (1 + power(10::numeric, (v_black_rating - v_white_rating)::numeric / 400));
+  update public.profiles
+    set rating = greatest(100, round(v_white_rating + 32 * (v_white_score - v_white_expected))::integer),
+        games_played = games_played + 1
+    where id = v_white;
+  update public.profiles
+    set rating = greatest(100, round(v_black_rating + 32 * ((1 - v_white_score) - (1 - v_white_expected)))::integer),
+        games_played = games_played + 1
+    where id = v_black;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.resign_chess_game(uuid) from public;
+grant execute on function public.resign_chess_game(uuid) to authenticated;

@@ -5,7 +5,7 @@
   "description": "Chess Kids — Hebrew chess website prototype",
   "scripts": {
     "dev": "node scripts/copy-engine.mjs && vite --host 0.0.0.0",
-    "build": "node scripts/copy-engine.mjs && vite build",
+    "build": "node scripts/copy-engine.mjs && vite build && node scripts/smoke-check.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "desktop": "npm run build && electron electron/main.cjs",
     "desktop:dist": "npm run build && electron-builder --win nsis"

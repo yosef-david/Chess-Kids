@@ -276,3 +276,74 @@ begin
   end if;
 end;
 $$;
+
+
+-- Store each move and update the game in one transaction.
+-- The function checks whose turn it is; the client still validates chess legality.
+create or replace function public.record_chess_move(
+  p_game_id uuid,
+  p_ply integer,
+  p_san text,
+  p_uci text,
+  p_fen_after text,
+  p_pgn text,
+  p_result text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_white uuid;
+  v_black uuid;
+  v_status text;
+  v_expected_ply integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select white_player, black_player, status
+    into v_white, v_black, v_status
+  from public.games
+  where id = p_game_id
+  for update;
+
+  if not found or (auth.uid() <> v_white and auth.uid() <> v_black) then
+    raise exception 'Game not found or access denied';
+  end if;
+
+  if v_status <> 'active' then
+    raise exception 'Game is not active';
+  end if;
+
+  if (p_ply % 2 = 1 and auth.uid() <> v_white)
+     or (p_ply % 2 = 0 and auth.uid() <> v_black) then
+    raise exception 'It is not this player turn';
+  end if;
+
+  select coalesce(max(ply), 0) + 1 into v_expected_ply
+  from public.game_moves
+  where game_id = p_game_id;
+
+  if p_ply <> v_expected_ply then
+    raise exception 'Move sequence conflict';
+  end if;
+
+  insert into public.game_moves(game_id, ply, player_id, san, uci, fen_after)
+  values (p_game_id, p_ply, auth.uid(), p_san, p_uci, p_fen_after);
+
+  update public.games
+  set current_fen = p_fen_after,
+      pgn = p_pgn,
+      status = case when p_result is null then 'active' else 'finished' end,
+      result = p_result,
+      updated_at = now(),
+      finished_at = case when p_result is null then null else now() end
+  where id = p_game_id;
+end;
+$$;
+
+revoke all on function public.record_chess_move(uuid, integer, text, text, text, text, text) from public;
+grant execute on function public.record_chess_move(uuid, integer, text, text, text, text, text) to authenticated;

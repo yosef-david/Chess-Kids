@@ -13,12 +13,10 @@
   "devDependencies": {
     "vite": "^6.0.7",
     "electron": "^35.0.0",
-    "electron-builder": "^26.0.12"
-  },
-  "main": "electron/main.cjs",
-  "dependencies": {
+    "electron-builder": "^26.0.12",
     "stockfish": "19.0.1"
   },
+  "main": "electron/main.cjs",
   "build": {
     "appId": "com.chesskids.desktop",
     "productName": "Chess Kids",

@@ -5,10 +5,46 @@
   "description": "Chess Kids — Hebrew chess website prototype",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "build": "node scripts/copy-engine.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "desktop": "npm run build && electron electron/main.cjs",
+    "desktop:dist": "npm run build && electron-builder --win nsis"
   },
   "devDependencies": {
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "main": "electron/main.cjs",
+  "dependencies": {
+    "stockfish": "19.0.1"
+  },
+  "build": {
+    "appId": "com.chesskids.desktop",
+    "productName": "Chess Kids",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

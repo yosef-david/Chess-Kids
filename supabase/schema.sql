@@ -441,3 +441,85 @@ revoke all on function public.is_chess_admin() from public;
 revoke all on function public.admin_set_player_rating(uuid, integer) from public;
 grant execute on function public.is_chess_admin() to authenticated;
 grant execute on function public.admin_set_player_rating(uuid, integer) to authenticated;
+
+
+-- Private game invitations. The short code is shared directly between players.
+create table if not exists public.game_invites (
+  id uuid primary key default gen_random_uuid(),
+  inviter_id uuid not null references public.profiles(id) on delete cascade,
+  invite_code text not null unique,
+  time_control text not null,
+  status text not null default 'pending' check (status in ('pending','accepted','declined','expired')),
+  game_id uuid references public.games(id) on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '30 minutes')
+);
+
+alter table public.game_invites enable row level security;
+create policy "Inviters can view their own invitations"
+  on public.game_invites for select to authenticated
+  using (inviter_id = auth.uid());
+
+create or replace function public.create_game_invite(p_time_control text)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_code text;
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+  v_code := upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 8));
+  insert into public.game_invites(inviter_id, invite_code, time_control)
+  values (v_user, v_code, p_time_control);
+  return v_code;
+end;
+$$;
+
+create or replace function public.accept_game_invite(p_invite_code text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_invite public.game_invites%rowtype;
+  v_game uuid;
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select * into v_invite
+  from public.game_invites
+  where invite_code = upper(trim(p_invite_code))
+  for update;
+
+  if not found or v_invite.status <> 'pending' or v_invite.expires_at < now() then
+    raise exception 'Invitation is invalid or expired';
+  end if;
+  if v_invite.inviter_id = v_user then
+    raise exception 'You cannot accept your own invitation';
+  end if;
+
+  insert into public.games(white_player, black_player, status, time_control)
+  values (v_invite.inviter_id, v_user, 'active', v_invite.time_control)
+  returning id into v_game;
+
+  update public.game_invites
+  set status = 'accepted', game_id = v_game
+  where id = v_invite.id;
+
+  return v_game;
+end;
+$$;
+
+revoke all on function public.create_game_invite(text) from public;
+revoke all on function public.accept_game_invite(text) from public;
+grant execute on function public.create_game_invite(text) to authenticated;
+grant execute on function public.accept_game_invite(text) to authenticated;

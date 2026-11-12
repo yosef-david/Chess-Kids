@@ -74,7 +74,7 @@ create policy "Club owners can delete clubs" on public.clubs for delete to authe
 drop policy if exists "Signed in players can view club memberships" on public.club_members;
 create policy "Signed in players can view club memberships" on public.club_members for select to authenticated using (true);
 drop policy if exists "Players can join clubs as themselves" on public.club_members;
-create policy "Players can join clubs as themselves" on public.club_members for insert to authenticated with check (user_id = auth.uid() and role = 'member');
+create policy "Players can join clubs as themselves" on public.club_members for insert to authenticated with check (user_id = auth.uid() and (role = 'member' or (role = 'owner' and exists (select 1 from public.clubs c where c.id = club_id and c.created_by = auth.uid()))));
 drop policy if exists "Players can leave clubs" on public.club_members;
 create policy "Players can leave clubs" on public.club_members for delete to authenticated using (user_id = auth.uid());
 

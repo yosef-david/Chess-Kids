@@ -98,7 +98,7 @@
   if(queuePoll){clearInterval(queuePoll);queuePoll=null}
   if(dbClient&&currentUser)await dbClient.rpc('leave_matchmaking_queue');
   if(gameChannel){await dbClient.removeChannel(gameChannel);gameChannel=null}
-  if(currentGameId&&dbClient&&!game.game_over())await dbClient.from('games').update({status:'abandoned'}).eq('id',currentGameId);
+  if(currentGameId&&dbClient&&!game.game_over())await dbClient.rpc('abandon_chess_game',{p_game_id:currentGameId});
   currentGameId=null;onlineColor=null;mode='local';
   document.getElementById('online').classList.remove('on');document.getElementById('local').classList.add('on');document.getElementById('computer').classList.remove('on');
   document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;

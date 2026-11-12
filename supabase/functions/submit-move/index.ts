@@ -115,11 +115,19 @@ Deno.serve(async (request: Request) => {
       return Response.json({ error: saveError.message }, { status: 409, headers: corsHeaders });
     }
 
+    const { data: clockState, error: clockError } = await admin
+      .from("games")
+      .select("white_time_ms,black_time_ms,active_color,clock_started_at,status,result")
+      .eq("id", gameId)
+      .single();
+    if (clockError) throw clockError;
+
     return Response.json({
       move: move.san,
       fen: chess.fen(),
       pgn: chess.pgn(),
       result,
+      clock: clockState,
     }, { headers: corsHeaders });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unexpected server error" }, {

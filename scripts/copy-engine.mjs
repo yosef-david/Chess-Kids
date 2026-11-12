@@ -12,4 +12,5 @@ await copyFile(resolve(root, 'config.js'), resolve(publicDir, 'config.js'));
 for (const file of ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm']) {
   await copyFile(resolve(engineSource, file), resolve(engineDestination, file));
 }
+await copyFile(resolve(root, 'node_modules/stockfish/Copying.txt'), resolve(engineDestination, 'COPYING.txt'));
 console.log('Chess Kids public config and Stockfish assets prepared.');

@@ -12,9 +12,10 @@
 <header class="top"><div class="brand">♞ Chess <span>Kids</span></div><div class="toptools"><button id="adminBtn" hidden>ניהול</button><button id="accountBtn">כניסה / הרשמה</button><button id="theme">☀ / ☾</button></div></header>
 <div class="auth-backdrop" id="authModal" hidden><section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" id="authClose" aria-label="סגירה">×</button><h2 id="authTitle">חשבון Chess Kids</h2><p id="authStatus">התחבר או צור חשבון חדש.</p><label for="authUsername">שם משתמש</label><input id="authUsername" maxlength="24" autocomplete="username" placeholder="שם משתמש (בהרשמה)"><label for="authEmail">כתובת דוא״ל</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="authPassword">סיסמה</label><input id="authPassword" type="password" minlength="8" autocomplete="current-password" placeholder="לפחות 8 תווים"><div class="auth-actions"><button id="signupBtn">יצירת חשבון</button><button id="signinBtn" class="alt">התחברות</button><button id="signoutBtn" class="alt">התנתקות</button></div></section></div>
 <div class="auth-backdrop" id="adminModal" hidden><section class="auth-dialog admin-dialog" role="dialog" aria-modal="true" aria-labelledby="adminTitle"><button class="auth-close" id="adminClose" aria-label="סגירה">×</button><h2 id="adminTitle">לוח ניהול Chess Kids</h2><p id="adminStatus">נתוני משתמשים ומשחקים.</p><button id="refreshAdmin" class="admin-refresh">רענן נתונים</button><h3>שחקנים</h3><div class="admin-table-wrap"><table id="adminPlayers"><thead><tr><th>שם משתמש</th><th>דירוג</th><th>משחקים</th><th>פעולה</th></tr></thead><tbody></tbody></table></div><h3>משחקים אחרונים</h3><div class="admin-table-wrap"><table id="adminGames"><thead><tr><th>מזהה</th><th>סטטוס</th><th>זמן</th><th>תוצאה</th></tr></thead><tbody></tbody></table></div></section></div>
+<div class="auth-backdrop" id="inviteModal" hidden><section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="inviteTitle"><button class="auth-close" id="inviteClose" aria-label="סגירה">×</button><h2 id="inviteTitle">משחק פרטי עם חבר</h2><p id="inviteStatus">צור קוד הזמנה ושלח אותו לחבר, או הזן קוד שקיבלת.</p><button id="createInviteBtn" class="admin-refresh">צור קוד הזמנה</button><div id="inviteCode" style="font-size:28px;font-weight:900;letter-spacing:5px;text-align:center;padding:18px;color:#70d6b2;direction:ltr"></div><label for="inviteInput">קוד שקיבלת מחבר</label><input id="inviteInput" maxlength="8" autocomplete="off" placeholder="לדוגמה: A1B2C3D4"><div class="auth-actions"><button id="acceptInviteBtn">הצטרף למשחק</button><button id="copyInviteBtn" class="alt">העתק קוד</button></div></section></div>
 <main><section class="hero"><div style="color:#70d6b2;font-weight:bold">מועדון השחמט שלך</div><h1>כל מהלך <span>מקרב לניצחון.</span></h1><p>משחקים, חושבים ומשתפרים — צעד אחד בכל פעם.</p></section>
 <section class="game"><div class="panel"><div class="player"><b id="topname">שחקן 2</b><span class="muted">דירוג 1200</span></div><div id="board" class="board"></div><div class="player" style="padding:14px 4px 0"><b>אתה</b><span class="muted">דירוג 1200</span></div></div>
-<aside class="panel"><div class="muted">לוח המשחק</div><div class="status" id="status">התור של הלבן</div><div class="muted" id="engineStatus" style="min-height:18px">מצב מחשב משתמש במנוע Stockfish</div><div class="clockbox"><label for="timecontrol">זמן למשחק</label><select id="timecontrol"><option value="60">1+0 • כדור</option><option value="180">3+0 • בליץ</option><option value="300" selected>5+0 • בליץ</option><option value="600">10+0 • ראפיד</option></select><div class="clocks"><div class="clock" id="blackclock">05:00</div><div class="clock" id="whiteclock">05:00</div></div></div><div class="mode"><button id="local" class="on">מקומי</button><button id="computer">נגד מחשב</button><button id="online">אונליין</button></div><div class="actions"><button id="new">＋ משחק חדש</button><button id="findOnline" class="alt">🌐 מצא יריב אונליין</button><button id="cancelQueue" class="alt" hidden>ביטול חיפוש</button><button id="flip" class="alt">⇄ החלף צדדים</button><button id="undo" class="alt">↶ בטל מהלך</button><button id="history" class="alt">☷ הצג מהלכים</button><button id="puzzle" class="alt">♟ חידה יומית</button><button id="export" class="alt">⇩ הורד משחק PGN</button><button id="import" class="alt">⇧ טען משחק PGN</button><input id="pgnfile" type="file" accept=".pgn,text/plain" hidden></div><div class="moves" id="moves" hidden></div><div class="hint">✦ טיפ: לחץ על כלי כדי לראות את המשבצות שאליהן הוא יכול לנוע.</div><div class="stats"><div>מהלכים<b id="count">0</b></div><div>מצב<b id="state">פעיל</b></div></div></aside></section>
+<aside class="panel"><div class="muted">לוח המשחק</div><div class="status" id="status">התור של הלבן</div><div class="muted" id="engineStatus" style="min-height:18px">מצב מחשב משתמש במנוע Stockfish</div><div class="clockbox"><label for="timecontrol">זמן למשחק</label><select id="timecontrol"><option value="60">1+0 • כדור</option><option value="180">3+0 • בליץ</option><option value="300" selected>5+0 • בליץ</option><option value="600">10+0 • ראפיד</option></select><div class="clocks"><div class="clock" id="blackclock">05:00</div><div class="clock" id="whiteclock">05:00</div></div></div><div class="mode"><button id="local" class="on">מקומי</button><button id="computer">נגד מחשב</button><button id="online">אונליין</button></div><div class="actions"><button id="new">＋ משחק חדש</button><button id="findOnline" class="alt">🌐 מצא יריב אונליין</button><button id="inviteFriend" class="alt">✉ הזמן חבר</button><button id="cancelQueue" class="alt" hidden>ביטול חיפוש</button><button id="flip" class="alt">⇄ החלף צדדים</button><button id="undo" class="alt">↶ בטל מהלך</button><button id="history" class="alt">☷ הצג מהלכים</button><button id="puzzle" class="alt">♟ חידה יומית</button><button id="export" class="alt">⇩ הורד משחק PGN</button><button id="import" class="alt">⇧ טען משחק PGN</button><input id="pgnfile" type="file" accept=".pgn,text/plain" hidden></div><div class="moves" id="moves" hidden></div><div class="hint">✦ טיפ: לחץ על כלי כדי לראות את המשבצות שאליהן הוא יכול לנוע.</div><div class="stats"><div>מהלכים<b id="count">0</b></div><div>מצב<b id="state">פעיל</b></div></div></aside></section>
 <section class="features"><div class="panel"><h3>♟ לומדים לשחק</h3><p>מתקדמים צעד אחר צעד בעולם השחמט.</p></div><div class="panel"><h3>⚡ משחקים בקצב שלך</h3><p>משחק ידידותי ונוח לכל רמה.</p></div><div class="panel"><h3>♛ משתפרים בכל יום</h3><p>כל משחק הוא הזדמנות ללמוד משהו חדש.</p></div></section><footer>Chess Kids • גרסת פיתוח ראשונית</footer></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
@@ -57,6 +58,33 @@
  document.getElementById('pgnfile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const text=await file.text();const loaded=game.load_pgn(text);if(!loaded){alert('קובץ PGN לא תקין.');return}if(engine)engine.postMessage('stop');enginePendingFen=null;selected=null;targets=[];busy=false;flagged=false;clockStarted=false;whiteTime=clockLimit;blackTime=clockLimit;draw()}catch(err){alert('לא הצלחנו לקרוא את קובץ ה-PGN.')}e.target.value=''};
  document.getElementById('timecontrol').onchange=e=>{clockLimit=Number(e.target.value);reset()};
  setInterval(()=>{const now=Date.now(),elapsed=Math.floor((now-lastTick)/1000);if(elapsed>0){lastTick+=elapsed*1000;if(clockStarted&&!game.game_over()&&!flagged){if(game.turn()==='w')whiteTime=Math.max(0,whiteTime-elapsed);else blackTime=Math.max(0,blackTime-elapsed);if(whiteTime===0||blackTime===0){flagged=true;busy=false}drawClocks();document.getElementById('state').textContent=flagged?'הזמן נגמר':game.game_over()?'הסתיים':'פעיל';if(flagged)document.getElementById('status').textContent='נגמר הזמן!'}}},250)
+  async function createInvite(){
+  if(!dbClient||!currentUser){authModal.hidden=false;authMessage('כדי להזמין חבר צריך להתחבר ולהגדיר Supabase.');return}
+  const tc=Number(document.getElementById('timecontrol').value)+'+0';
+  document.getElementById('inviteStatus').textContent='יוצר קוד…';
+  const {data,error}=await dbClient.rpc('create_game_invite',{p_time_control:tc});
+  if(error){document.getElementById('inviteStatus').textContent=error.message;return}
+  activeInviteCode=data;document.getElementById('inviteCode').textContent=data;
+  document.getElementById('inviteStatus').textContent='שלח לחבר את הקוד. המשחק ייפתח אוטומטית כשהוא יצטרף.';
+  if(invitePoll)clearInterval(invitePoll);
+  invitePoll=setInterval(async()=>{const result=await dbClient.from('game_invites').select('status,game_id,expires_at').eq('invite_code',activeInviteCode).maybeSingle();if(result.data&&result.data.status==='accepted'&&result.data.game_id){clearInterval(invitePoll);invitePoll=null;document.getElementById('inviteModal').hidden=true;await enterOnlineGame(result.data.game_id)}else if(result.data&&new Date(result.data.expires_at)<new Date()){clearInterval(invitePoll);invitePoll=null;document.getElementById('inviteStatus').textContent='תוקף ההזמנה פג.'}},3000);
+ }
+ async function acceptInvite(){
+  if(!dbClient||!currentUser){authModal.hidden=false;authMessage('כדי להצטרף למשחק צריך להתחבר ולהגדיר Supabase.');return}
+  const code=document.getElementById('inviteInput').value.trim().toUpperCase();
+  if(!/^[A-F0-9]{8}$/.test(code)){document.getElementById('inviteStatus').textContent='יש להזין קוד בן 8 תווים.';return}
+  document.getElementById('inviteStatus').textContent='בודק את הקוד…';
+  const {data,error}=await dbClient.rpc('accept_game_invite',{p_invite_code:code});
+  if(error){document.getElementById('inviteStatus').textContent=error.message;return}
+  if(invitePoll){clearInterval(invitePoll);invitePoll=null}
+  document.getElementById('inviteModal').hidden=true;await enterOnlineGame(data);
+ }
+ document.getElementById('inviteFriend').onclick=()=>{document.getElementById('inviteModal').hidden=false};
+ document.getElementById('inviteClose').onclick=()=>{document.getElementById('inviteModal').hidden=true};
+ document.getElementById('inviteModal').addEventListener('click',e=>{if(e.target===document.getElementById('inviteModal'))document.getElementById('inviteModal').hidden=true});
+ document.getElementById('createInviteBtn').onclick=createInvite;
+ document.getElementById('acceptInviteBtn').onclick=acceptInvite;
+ document.getElementById('copyInviteBtn').onclick=()=>{if(activeInviteCode&&navigator.clipboard)navigator.clipboard.writeText(activeInviteCode).then(()=>document.getElementById('inviteStatus').textContent='הקוד הועתק.').catch(()=>document.getElementById('inviteStatus').textContent='לא הצלחנו להעתיק; אפשר לסמן ולהעתיק ידנית.')};
  async function saveOnlineMove(move){
   if(!dbClient||!currentGameId||!move)return;
   const result=game.in_checkmate()?(game.turn()==='w'?'0-1':'1-0'):game.in_draw()?'1/2-1/2':null;
@@ -66,7 +94,7 @@
  async function enterOnlineGame(id){
   const {data,error}=await dbClient.from('games').select('*').eq('id',id).single();
   if(error||!data){document.getElementById('status').textContent='לא הצלחנו לפתוח את המשחק';return}
-  currentGameId=id;onlineColor=data.white_player===currentUser.id?'w':'b';
+  currentGameId=id;mode='online';document.getElementById('online').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('computer').classList.remove('on');onlineColor=data.white_player===currentUser.id?'w':'b';
   game.reset();if(data.pgn)game.load_pgn(data.pgn);
   document.getElementById('topname').textContent=onlineColor==='w'?'יריב אונליין • שחור':'יריב אונליין • לבן';
   document.getElementById('cancelQueue').hidden=true;document.getElementById('findOnline').disabled=false;
@@ -97,6 +125,7 @@
  }
  async function exitOnline(){
   if(queuePoll){clearInterval(queuePoll);queuePoll=null}
+  if(invitePoll){clearInterval(invitePoll);invitePoll=null}
   if(dbClient&&currentUser)await dbClient.rpc('leave_matchmaking_queue');
   if(gameChannel){await dbClient.removeChannel(gameChannel);gameChannel=null}
   if(currentGameId&&dbClient&&!game.game_over())await dbClient.rpc('abandon_chess_game',{p_game_id:currentGameId});
@@ -113,7 +142,7 @@ document.getElementById('new').onclick=()=>{if(mode==='online')exitOnline();else
  document.getElementById('local').onclick=()=>{if(mode==='online'){exitOnline();return}mode='local';document.getElementById('local').classList.add('on');document.getElementById('computer').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='שחקן 2';reset()};
  document.getElementById('computer').onclick=()=>{const apply=()=>{mode='computer';document.getElementById('computer').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('online').classList.remove('on');document.getElementById('topname').textContent='מחשב';reset()};if(mode==='online'){exitOnline().then(apply)}else apply()};
  document.getElementById('theme').onclick=()=>document.body.classList.toggle('light');
- let dbClient=null,currentUser=null,currentGameId=null,onlineColor=null,gameChannel=null,queuePoll=null;
+ let dbClient=null,currentUser=null,currentGameId=null,onlineColor=null,gameChannel=null,queuePoll=null,invitePoll=null,activeInviteCode=null;
  const authModal=document.getElementById('authModal');
  const authStatus=document.getElementById('authStatus');
  function authMessage(message){authStatus.textContent=message}

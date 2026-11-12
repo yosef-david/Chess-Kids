@@ -387,7 +387,8 @@ end;
 $$;
 
 revoke all on function public.record_chess_move(uuid, integer, text, text, text, text, text) from public;
-grant execute on function public.record_chess_move(uuid, integer, text, text, text, text, text) to authenticated;
+revoke all on function public.record_chess_move(uuid, integer, text, text, text, text, text) from authenticated;
+grant execute on function public.record_chess_move(uuid, integer, text, text, text, text, text) to service_role;
 revoke all on function public.abandon_chess_game(uuid) from public;
 grant execute on function public.abandon_chess_game(uuid) to authenticated;
 

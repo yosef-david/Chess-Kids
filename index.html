@@ -283,11 +283,12 @@ document.getElementById('new').onclick=()=>{if(mode==='online')exitOnline();else
  const pageElements={home:['.hero','.quickstart','#howItWorks'],play:['#gameArea'],bots:['#gameArea','#bots'],clubs:['#clubs'],community:['#community'],learn:['#learn','#gameArea'],tournaments:['#tournaments'],ranking:[],account:[]};
  [...main.children].forEach(el=>{if(el.tagName==='FOOTER')return;if(el===heading)return;const allowed=(pageElements[pageKey]||[]).some(sel=>el.matches(sel));if(!allowed)el.classList.add('page-hidden')});
  document.querySelectorAll('.site-nav a').forEach(a=>{if(new URL(a.href).searchParams.get('page')===pageKey)a.setAttribute('aria-current','page')});
- if(pageKey==='ranking'){document.getElementById('leaderboardModal').hidden=false;loadLeaderboard()}
+ if(pageKey==='ranking'){document.getElementById('leaderboardModal').hidden=false;}
  if(pageKey==='account'){document.getElementById('authModal').hidden=false}
  if(pageKey==='play'||pageKey==='bots')document.getElementById('gameArea').scrollIntoView({block:'start'});
  draw();
  initAuth();
+ if(pageKey==='ranking')setTimeout(loadLeaderboard,700);
  async function loadCommunity(){
   const clubs=document.getElementById('clubList'),posts=document.getElementById('postList');
   if(!dbClient){clubs.innerHTML='<div class="hub-empty">חיבור הקהילה יופעל לאחר הגדרת Supabase.</div>';posts.innerHTML='<div class="hub-empty">חיבור הקהילה יופעל לאחר הגדרת Supabase.</div>';return}

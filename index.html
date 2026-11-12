@@ -9,9 +9,10 @@
 </style>
 </head>
 <body>
-<header class="top"><div class="brand">♞ Chess <span>Kids</span></div><div class="toptools"><button id="adminBtn" hidden>ניהול</button><button id="accountBtn">כניסה / הרשמה</button><button id="theme">☀ / ☾</button></div></header>
+<header class="top"><div class="brand">♞ Chess <span>Kids</span></div><div class="toptools"><button id="adminBtn" hidden>ניהול</button><button id="leaderboardBtn">דירוגים</button><button id="accountBtn">כניסה / הרשמה</button><button id="theme">☀ / ☾</button></div></header>
 <div class="auth-backdrop" id="authModal" hidden><section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" id="authClose" aria-label="סגירה">×</button><h2 id="authTitle">חשבון Chess Kids</h2><p id="authStatus">התחבר או צור חשבון חדש.</p><label for="authUsername">שם משתמש</label><input id="authUsername" maxlength="24" autocomplete="username" placeholder="שם משתמש (בהרשמה)"><label for="authEmail">כתובת דוא״ל</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="authPassword">סיסמה</label><input id="authPassword" type="password" minlength="8" autocomplete="current-password" placeholder="לפחות 8 תווים"><div class="auth-actions"><button id="signupBtn">יצירת חשבון</button><button id="signinBtn" class="alt">התחברות</button><button id="signoutBtn" class="alt">התנתקות</button></div><button id="myGamesBtn" class="admin-refresh">המשחקים שלי</button><div id="myGamesList" class="my-games-list"></div></section></div>
 <div class="auth-backdrop" id="adminModal" hidden><section class="auth-dialog admin-dialog" role="dialog" aria-modal="true" aria-labelledby="adminTitle"><button class="auth-close" id="adminClose" aria-label="סגירה">×</button><h2 id="adminTitle">לוח ניהול Chess Kids</h2><p id="adminStatus">נתוני משתמשים ומשחקים.</p><button id="refreshAdmin" class="admin-refresh">רענן נתונים</button><h3>שחקנים</h3><div class="admin-table-wrap"><table id="adminPlayers"><thead><tr><th>שם משתמש</th><th>דירוג</th><th>משחקים</th><th>פעולה</th></tr></thead><tbody></tbody></table></div><h3>משחקים אחרונים</h3><div class="admin-table-wrap"><table id="adminGames"><thead><tr><th>מזהה</th><th>סטטוס</th><th>זמן</th><th>תוצאה</th></tr></thead><tbody></tbody></table></div></section></div>
+<div class="auth-backdrop" id="leaderboardModal" hidden><section class="auth-dialog admin-dialog" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle"><button class="auth-close" id="leaderboardClose" aria-label="סגירה">×</button><h2 id="leaderboardTitle">טבלת הדירוגים</h2><p id="leaderboardStatus">השחקנים המובילים ב-Chess Kids.</p><div class="admin-table-wrap"><table id="leaderboardTable"><thead><tr><th>מקום</th><th>שחקן</th><th>דירוג</th><th>משחקים</th></tr></thead><tbody></tbody></table></div></section></div>
 <div class="auth-backdrop" id="inviteModal" hidden><section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="inviteTitle"><button class="auth-close" id="inviteClose" aria-label="סגירה">×</button><h2 id="inviteTitle">משחק פרטי עם חבר</h2><p id="inviteStatus">צור קוד הזמנה ושלח אותו לחבר, או הזן קוד שקיבלת.</p><button id="createInviteBtn" class="admin-refresh">צור קוד הזמנה</button><div id="inviteCode" style="font-size:28px;font-weight:900;letter-spacing:5px;text-align:center;padding:18px;color:#70d6b2;direction:ltr"></div><label for="inviteInput">קוד שקיבלת מחבר</label><input id="inviteInput" maxlength="8" autocomplete="off" placeholder="לדוגמה: A1B2C3D4"><div class="auth-actions"><button id="acceptInviteBtn">הצטרף למשחק</button><button id="copyInviteBtn" class="alt">העתק קוד</button></div></section></div>
 <main><section class="hero"><div style="color:#70d6b2;font-weight:bold">מועדון השחמט שלך</div><h1>כל מהלך <span>מקרב לניצחון.</span></h1><p>משחקים, חושבים ומשתפרים — צעד אחד בכל פעם.</p></section>
 <section class="game"><div class="panel"><div class="player"><b id="topname">שחקן 2</b><span class="muted">דירוג 1200</span></div><div id="board" class="board"></div><div class="player" style="padding:14px 4px 0"><b>אתה</b><span class="muted">דירוג 1200</span></div></div>
@@ -174,6 +175,19 @@ document.getElementById('new').onclick=()=>{if(mode==='online')exitOnline();else
   dbClient.auth.getSession().then(({data})=>syncAuth(data.session));
   dbClient.auth.onAuthStateChange((_event,session)=>syncAuth(session));
  }
+ async function loadLeaderboard(){
+  if(!dbClient||!currentUser){authModal.hidden=false;authMessage('כדי לראות את טבלת הדירוגים יש להתחבר.');return}
+  const modal=document.getElementById('leaderboardModal');modal.hidden=false;
+  const status=document.getElementById('leaderboardStatus');status.textContent='טוען דירוגים…';
+  const {data,error}=await dbClient.from('profiles').select('username,display_name,rating,games_played').order('rating',{ascending:false}).limit(50);
+  const body=document.querySelector('#leaderboardTable tbody');body.replaceChildren();
+  if(error){status.textContent='לא הצלחנו לטעון את הדירוגים.';return}
+  (data||[]).forEach((p,index)=>{const tr=document.createElement('tr');for(const value of [index+1,p.display_name||p.username,p.rating,p.games_played]){const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td)}body.appendChild(tr)});
+  status.textContent='מוצגים '+(data||[]).length+' שחקנים מובילים.';
+ }
+ document.getElementById('leaderboardBtn').onclick=loadLeaderboard;
+ document.getElementById('leaderboardClose').onclick=()=>{document.getElementById('leaderboardModal').hidden=true};
+ document.getElementById('leaderboardModal').addEventListener('click',e=>{if(e.target===document.getElementById('leaderboardModal'))document.getElementById('leaderboardModal').hidden=true});
  async function loadAdminDashboard(){
   if(!dbClient||!currentUser)return;
   const status=document.getElementById('adminStatus');status.textContent='טוען נתונים…';

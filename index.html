@@ -122,6 +122,7 @@
  async function startOnline(){
   if(!dbClient||!currentUser){authModal.hidden=false;authMessage('כדי לשחק אונליין צריך להתחבר ולהגדיר Supabase.');return}
   if(queuePoll){clearInterval(queuePoll);queuePoll=null}
+  if(invitePoll){clearInterval(invitePoll);invitePoll=null}
   mode='online';document.getElementById('online').classList.add('on');document.getElementById('local').classList.remove('on');document.getElementById('computer').classList.remove('on');
   reset();currentGameId=null;onlineColor=null;
   document.getElementById('findOnline').disabled=true;document.getElementById('cancelQueue').hidden=false;

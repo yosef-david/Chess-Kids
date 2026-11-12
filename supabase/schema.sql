@@ -18,6 +18,10 @@ create table if not exists public.games (
   black_player uuid references public.profiles(id),
   status text not null default 'waiting' check (status in ('waiting','active','finished','abandoned')),
   time_control text not null default '300+0',
+  white_time_ms bigint not null default 300000,
+  black_time_ms bigint not null default 300000,
+  active_color text not null default 'w' check (active_color in ('w','b')),
+  clock_started_at timestamptz,
   initial_fen text,
   current_fen text,
   pgn text,
@@ -27,6 +31,11 @@ create table if not exists public.games (
   finished_at timestamptz,
   constraint different_players check (black_player is null or black_player <> white_player)
 );
+
+alter table public.games add column if not exists white_time_ms bigint not null default 300000;
+alter table public.games add column if not exists black_time_ms bigint not null default 300000;
+alter table public.games add column if not exists active_color text not null default 'w';
+alter table public.games add column if not exists clock_started_at timestamptz;
 
 create table if not exists public.game_moves (
   id uuid primary key default gen_random_uuid(),
@@ -188,6 +197,7 @@ declare
   v_opponent uuid;
   v_game uuid;
   v_existing uuid;
+  v_base_seconds integer;
 begin
   if v_user is null then
     raise exception 'Authentication required';
@@ -225,8 +235,9 @@ begin
     return null;
   end if;
 
-  insert into public.games(white_player, black_player, status, time_control)
-  values (v_opponent, v_user, 'active', p_time_control)
+  v_base_seconds := greatest(1, split_part(p_time_control, '+', 1)::integer);
+  insert into public.games(white_player, black_player, status, time_control, white_time_ms, black_time_ms, active_color, clock_started_at)
+  values (v_opponent, v_user, 'active', p_time_control, v_base_seconds * 1000, v_base_seconds * 1000, 'w', now())
   returning id into v_game;
 
   update public.matchmaking_queue
@@ -303,13 +314,18 @@ declare
   v_black_rating integer;
   v_white_score numeric;
   v_white_expected numeric;
+  v_white_time_ms bigint;
+  v_black_time_ms bigint;
+  v_active_color text;
+  v_clock_started_at timestamptz;
+  v_elapsed_ms bigint;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
   end if;
 
-  select white_player, black_player, status
-    into v_white, v_black, v_status
+  select white_player, black_player, status, white_time_ms, black_time_ms, active_color, clock_started_at
+    into v_white, v_black, v_status, v_white_time_ms, v_black_time_ms, v_active_color, v_clock_started_at
   from public.games
   where id = p_game_id
   for update;
@@ -325,6 +341,23 @@ begin
   if (p_ply % 2 = 1 and auth.uid() <> v_white)
      or (p_ply % 2 = 0 and auth.uid() <> v_black) then
     raise exception 'It is not this player turn';
+  end if;
+  if (v_active_color = 'w' and auth.uid() <> v_white)
+     or (v_active_color = 'b' and auth.uid() <> v_black) then
+    raise exception 'Clock turn does not match player turn';
+  end if;
+
+  v_elapsed_ms := case
+    when v_clock_started_at is null then 0
+    else greatest(0, floor(extract(epoch from (now() - v_clock_started_at)) * 1000)::bigint)
+  end;
+
+  if v_active_color = 'w' then
+    v_white_time_ms := greatest(0, v_white_time_ms - v_elapsed_ms);
+    if v_white_time_ms <= 0 then raise exception 'White clock expired'; end if;
+  else
+    v_black_time_ms := greatest(0, v_black_time_ms - v_elapsed_ms);
+    if v_black_time_ms <= 0 then raise exception 'Black clock expired'; end if;
   end if;
 
   if p_result is not null and p_result not in ('1-0','0-1','1/2-1/2') then
@@ -348,7 +381,11 @@ begin
       status = case when p_result is null then 'active' else 'finished' end,
       result = p_result,
       updated_at = now(),
-      finished_at = case when p_result is null then null else now() end
+      finished_at = case when p_result is null then null else now() end,
+      white_time_ms = v_white_time_ms,
+      black_time_ms = v_black_time_ms,
+      active_color = case when v_active_color = 'w' then 'b' else 'w' end,
+      clock_started_at = case when p_result is null then now() else null end
   where id = p_game_id;
 
   if p_result is not null and v_black is not null then
@@ -491,6 +528,7 @@ declare
   v_user uuid := auth.uid();
   v_invite public.game_invites%rowtype;
   v_game uuid;
+  v_base_seconds integer;
 begin
   if v_user is null then
     raise exception 'Authentication required';
@@ -508,8 +546,9 @@ begin
     raise exception 'You cannot accept your own invitation';
   end if;
 
-  insert into public.games(white_player, black_player, status, time_control)
-  values (v_invite.inviter_id, v_user, 'active', v_invite.time_control)
+  v_base_seconds := greatest(1, split_part(v_invite.time_control, '+', 1)::integer);
+  insert into public.games(white_player, black_player, status, time_control, white_time_ms, black_time_ms, active_color, clock_started_at)
+  values (v_invite.inviter_id, v_user, 'active', v_invite.time_control, v_base_seconds * 1000, v_base_seconds * 1000, 'w', now())
   returning id into v_game;
 
   update public.game_invites

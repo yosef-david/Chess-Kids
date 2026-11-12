@@ -563,3 +563,86 @@ revoke all on function public.create_game_invite(text) from public;
 revoke all on function public.accept_game_invite(text) from public;
 grant execute on function public.create_game_invite(text) to authenticated;
 grant execute on function public.accept_game_invite(text) to authenticated;
+
+
+-- Server-authoritative timeout adjudication.
+create or replace function public.claim_game_timeout(p_game_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_white uuid;
+  v_black uuid;
+  v_status text;
+  v_white_time_ms bigint;
+  v_black_time_ms bigint;
+  v_active_color text;
+  v_clock_started_at timestamptz;
+  v_elapsed_ms bigint;
+  v_result text;
+  v_white_rating integer;
+  v_black_rating integer;
+  v_white_score numeric;
+  v_white_expected numeric;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select white_player, black_player, status, white_time_ms, black_time_ms, active_color, clock_started_at
+    into v_white, v_black, v_status, v_white_time_ms, v_black_time_ms, v_active_color, v_clock_started_at
+  from public.games
+  where id = p_game_id
+  for update;
+
+  if not found or (auth.uid() <> v_white and auth.uid() <> v_black) then
+    raise exception 'Game not found or access denied';
+  end if;
+  if v_status <> 'active' or v_clock_started_at is null then
+    return null;
+  end if;
+
+  v_elapsed_ms := greatest(0, floor(extract(epoch from (now() - v_clock_started_at)) * 1000)::bigint);
+  if v_active_color = 'w' then
+    if v_white_time_ms - v_elapsed_ms > 0 then return null; end if;
+    v_white_time_ms := 0;
+    v_result := '0-1';
+  else
+    if v_black_time_ms - v_elapsed_ms > 0 then return null; end if;
+    v_black_time_ms := 0;
+    v_result := '1-0';
+  end if;
+
+  update public.games
+  set status = 'finished',
+      result = v_result,
+      white_time_ms = v_white_time_ms,
+      black_time_ms = v_black_time_ms,
+      clock_started_at = null,
+      finished_at = now(),
+      updated_at = now()
+  where id = p_game_id;
+
+  if v_black is not null then
+    select rating into v_white_rating from public.profiles where id = v_white for update;
+    select rating into v_black_rating from public.profiles where id = v_black for update;
+    v_white_score := case v_result when '1-0' then 1 else 0 end;
+    v_white_expected := 1 / (1 + power(10::numeric, (v_black_rating - v_white_rating)::numeric / 400));
+    update public.profiles
+      set rating = greatest(100, round(v_white_rating + 32 * (v_white_score - v_white_expected))::integer),
+          games_played = games_played + 1
+      where id = v_white;
+    update public.profiles
+      set rating = greatest(100, round(v_black_rating + 32 * ((1 - v_white_score) - (1 - v_white_expected)))::integer),
+          games_played = games_played + 1
+      where id = v_black;
+  end if;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.claim_game_timeout(uuid) from public;
+grant execute on function public.claim_game_timeout(uuid) to authenticated;

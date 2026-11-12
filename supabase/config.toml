@@ -1,0 +1,4 @@
+project_id = "replace-with-your-supabase-project-ref"
+
+[functions.submit-move]
+verify_jwt = true

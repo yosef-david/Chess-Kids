@@ -3,3 +3,6 @@ dist
 .env
 .env.local
 .DS_Store
+public/config.js
+public/engine/
+release/

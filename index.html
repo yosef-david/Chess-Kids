@@ -24,18 +24,18 @@
  function draw(){
   board.innerHTML='';const files='abcdefgh',rows=flipped?[8,7,6,5,4,3,2,1]:[1,2,3,4,5,6,7,8],cols=flipped?[...files].reverse():[...files];
   rows.slice().reverse().forEach((rank,ri)=>cols.forEach((file,ci)=>{
-   const sq=file+rank,p=game.get(sq),el=document.createElement('button');el.className='sq '+((files.indexOf(file)+rank)%2?'a':'b');if(selected===sq)el.classList.add('sel');
+   const sq=file+rank,p=game.get(sq),el=document.createElement('button');el.className='sq '+((files.indexOf(file)+rank)%2?'b':'a');if(selected===sq)el.classList.add('sel');
    if(p){const span=document.createElement('span');span.className='piece '+(p.color==='w'?'white':'black');span.textContent=glyph[p.color][p.type];el.appendChild(span)}
    if(targets.includes(sq)){const mark=document.createElement('i');mark.className=p?'ring':'dot';el.appendChild(mark)}
    if(ci===0){const co=document.createElement('small');co.className='coords';co.textContent=rank;el.appendChild(co)}
    el.addEventListener('click',()=>clickSquare(sq));board.appendChild(el);
   }));
-  document.getElementById('status').textContent=game.in_checkmate()?'מט! המשחק הסתיים':game.in_draw()?'תיקו!':game.in_check()?'שח!':busy?'המחשב חושב…':'התור של '+(game.turn()==='w'?'הלבן':'השחור');
+  document.getElementById('status').textContent=flagged?'נגמר הזמן!':game.in_checkmate()?'מט! המשחק הסתיים':game.in_draw()?'תיקו!':game.in_check()?'שח!':busy?'המחשב חושב…':'התור של '+(game.turn()==='w'?'הלבן':'השחור');
   document.getElementById('count').textContent=game.history().length;document.getElementById('state').textContent=flagged?'הזמן נגמר':game.game_over()?'הסתיים':'פעיל';drawClocks();
   document.getElementById('moves').innerHTML=game.history().map((m,i)=>(i%2===0?'<br><span>'+(Math.floor(i/2)+1)+'.</span>':' ')+m).join('');
  }
  function clickSquare(sq){
-  if(busy||game.game_over()||(mode==='computer'&&game.turn()==='b'))return;
+  if(busy||flagged||game.game_over()||(mode==='computer'&&game.turn()==='b'))return;
   const p=game.get(sq);
   if(selected&&targets.includes(sq)){game.move({from:selected,to:sq,promotion:'q'});clockStarted=true;lastTick=Date.now();selected=null;targets=[];draw();if(mode==='computer'&&!game.game_over())bot();return}
   if(p&&p.color===game.turn()){selected=sq;targets=game.moves({square:sq,verbose:true}).map(m=>m.to)}else{selected=null;targets=[]}draw();

@@ -230,6 +230,7 @@ begin
   where time_control = p_time_control
     and status = 'waiting'
     and player_id <> v_user
+    and created_at > now() - interval '2 minutes'
   order by created_at
   limit 1
   for update skip locked;

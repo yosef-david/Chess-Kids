@@ -293,6 +293,7 @@ $$;
 -- The function checks whose turn it is; the client still validates chess legality.
 create or replace function public.record_chess_move(
   p_game_id uuid,
+  p_player_id uuid,
   p_ply integer,
   p_san text,
   p_uci text,
@@ -320,7 +321,7 @@ declare
   v_clock_started_at timestamptz;
   v_elapsed_ms bigint;
 begin
-  if auth.uid() is null then
+  if p_player_id is null then
     raise exception 'Authentication required';
   end if;
 
@@ -330,7 +331,7 @@ begin
   where id = p_game_id
   for update;
 
-  if not found or (auth.uid() <> v_white and auth.uid() <> v_black) then
+  if not found or (p_player_id <> v_white and p_player_id <> v_black) then
     raise exception 'Game not found or access denied';
   end if;
 
@@ -338,12 +339,12 @@ begin
     raise exception 'Game is not active';
   end if;
 
-  if (p_ply % 2 = 1 and auth.uid() <> v_white)
-     or (p_ply % 2 = 0 and auth.uid() <> v_black) then
+  if (p_ply % 2 = 1 and p_player_id <> v_white)
+     or (p_ply % 2 = 0 and p_player_id <> v_black) then
     raise exception 'It is not this player turn';
   end if;
-  if (v_active_color = 'w' and auth.uid() <> v_white)
-     or (v_active_color = 'b' and auth.uid() <> v_black) then
+  if (v_active_color = 'w' and p_player_id <> v_white)
+     or (v_active_color = 'b' and p_player_id <> v_black) then
     raise exception 'Clock turn does not match player turn';
   end if;
 
@@ -373,7 +374,7 @@ begin
   end if;
 
   insert into public.game_moves(game_id, ply, player_id, san, uci, fen_after)
-  values (p_game_id, p_ply, auth.uid(), p_san, p_uci, p_fen_after);
+  values (p_game_id, p_ply, p_player_id, p_san, p_uci, p_fen_after);
 
   update public.games
   set current_fen = p_fen_after,

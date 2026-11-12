@@ -202,6 +202,9 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
+  if p_time_control not in ('60+0','180+0','300+0','600+0') then
+    raise exception 'Unsupported time control';
+  end if;
 
   select game_id into v_existing
   from public.matchmaking_queue
@@ -431,7 +434,7 @@ revoke all on function public.abandon_chess_game(uuid) from public;
 grant execute on function public.abandon_chess_game(uuid) to authenticated;
 
 -- Clients may edit display names/usernames, but cannot alter ratings or game records.
-revoke update on public.profiles from authenticated;
+revoke insert, update on public.profiles from authenticated;
 grant update (username, display_name) on public.profiles to authenticated;
 revoke insert, update on public.games from authenticated;
 revoke insert on public.game_moves from authenticated;
@@ -511,6 +514,9 @@ declare
 begin
   if v_user is null then
     raise exception 'Authentication required';
+  end if;
+  if p_time_control not in ('60+0','180+0','300+0','600+0') then
+    raise exception 'Unsupported time control';
   end if;
   v_code := upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 8));
   insert into public.game_invites(inviter_id, invite_code, time_control)

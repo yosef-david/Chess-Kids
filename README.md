@@ -31,7 +31,7 @@ npm run dev
 npm run build
 ```
 
-הפקודה מעתיקה את קובצי Stockfish לתיקיית `public/engine` ואז בונה את האתר ל-`dist`.
+הפקודה מעתיקה את קובצי Stockfish לתיקיית `public/engine`, בונה את האתר ל-`dist` ומריצה בדיקת Smoke שמוודאת שקובצי האתר, ההגדרות, מנוע Stockfish וקובץ הרישיון קיימים.
 
 ## פרסום ב-Vercel
 ייבא את המאגר `yosef-david/Chess-Kids` ל-Vercel. הגדרות הבנייה נמצאות ב-`vercel.json`:
@@ -56,6 +56,8 @@ npm run build
 לעולם אין להכניס ל-`config.js` מפתח `service_role` או סיסמת מסד נתונים. הקובץ נשלח לדפדפן והוא ציבורי.
 
 ## אפליקציית Windows
+אפשר לבנות מתקין גם דרך GitHub Actions: פתח את לשונית Actions, בחר `Chess Kids Windows installer` ולחץ `Run workflow`. בסיום, הורד את `Chess-Kids-Windows-Installer` מתוך Artifacts של הריצה. לחלופין, יצירת תגית `v...` מפעילה את אותה בנייה אוטומטית.
+
 ליצירת מתקין Windows (NSIS) במחשב Windows:
 
 ```bash
